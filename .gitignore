@@ -4,5 +4,9 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+*.pem
+*.key
 .streamlit/secrets.toml
 Geospatial-LLM-upload.zip
+.geollm/
