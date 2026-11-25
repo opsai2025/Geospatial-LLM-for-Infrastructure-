@@ -17,6 +17,10 @@ CSS = f"""
 /* ---------- RTL layout: sidebar on the right, all text right-aligned ---------- */
 [data-testid="stAppViewContainer"] {{ direction: rtl; }}
 [data-testid="stMain"], [data-testid="stSidebar"] {{ direction: rtl; text-align: right; }}
+[data-testid="stMain"] p, [data-testid="stSidebar"] p,
+[data-testid="stMain"] label, [data-testid="stSidebar"] label,
+.gc-header, .gc-brand, .gc-side-title, .gc-side-note, .gc-side-region,
+.gc-section, .gc-box, .gc-card, .gc-bars, .gc-table, input, textarea {{ font-family: {FONT_STACK} !important; }}
 [data-testid="stMainBlockContainer"] {{ padding-top: 2.5rem !important; max-width: 1480px; }}
 [data-testid="stSidebarUserContent"] {{ padding-top: 0.5rem; }}
 /* Left-to-right islands: code, technical identifiers, the map */

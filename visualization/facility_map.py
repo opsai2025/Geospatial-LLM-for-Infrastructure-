@@ -51,12 +51,12 @@ MAP_CSS = f"""
 """
 
 
-def _row(label: str, value: str | None, *, is_html: bool = False) -> str:
+def _row(label: str, value: str | None, *, is_html: bool = False, align: str = "right") -> str:
     if not value:
         return ""
     shown = value if is_html else html.escape(value)
     return (
-        f"<tr><th style='text-align:right;padding-left:8px;vertical-align:top;white-space:nowrap'>{label}</th>"
+        f"<tr><th style='text-align:{align};padding-inline-end:8px;vertical-align:top;white-space:nowrap'>{label}</th>"
         f"<td>{shown}</td></tr>"
     )
 
@@ -71,7 +71,31 @@ def _safe_link(url: str | None) -> str | None:
     return f"<a href='{escaped}' target='_blank' rel='noopener noreferrer' dir='ltr'>{escaped}</a>"
 
 
-def facility_popup_html(facility: Facility) -> str:
+def facility_popup_html(facility: Facility, *, locale: str = "fa") -> str:
+    if locale == "en":
+        name = html.escape(facility.name) if facility.name else "<i>Unnamed in OpenStreetMap</i>"
+        definition = config.CATEGORIES.get(facility.category)
+        category = definition.label if definition else facility.category_label
+        precision = {
+            "osm_node": "Mapped point",
+            "osm_way_center": "Approximate area center",
+            "osm_relation_center": "Approximate relation center",
+        }.get(facility.location_precision, facility.location_precision)
+        fields = [
+            ("Category", category, False), ("Address", facility.address, False),
+            ("Operator", facility.operator, False), ("Phone", facility.phone, False),
+            ("Website", _safe_link(facility.website), True), ("Position", precision, False),
+            ("Quality", ", ".join(f.replace("_", " ") for f in facility.quality_flags), False),
+            ("OSM ID", f"<a href='{facility.osm_url}' target='_blank' rel='noopener noreferrer'>"
+             f"{facility.source_id}</a>", True),
+        ]
+        rows = "".join(_row(label, value, is_html=is_html, align="left") for label, value, is_html in fields)
+        return (
+            "<div dir='ltr' style='font-family:system-ui,sans-serif;font-size:13px;line-height:1.7;min-width:230px'>"
+            f"<b style='font-size:15px'>{name}</b><table style='margin-top:4px'>{rows}</table>"
+            "<div style='margin-top:6px;color:#555;font-size:12px'>"
+            "Mapped in OpenStreetMap; operational status is not verified.</div></div>"
+        )
     name = html.escape(facility.name) if facility.name else "<i>بدون نام (نامی در OSM ثبت نشده)</i>"
     definition = config.CATEGORIES.get(facility.category)
     category = (definition.label_fa or definition.label) if definition else facility.category_label
@@ -103,11 +127,11 @@ def facility_popup_html(facility: Facility) -> str:
     )
 
 
-def _add_region_outline(fmap: folium.Map, region: Region) -> None:
+def _add_region_outline(fmap: folium.Map, region: Region, *, locale: str = "fa") -> None:
     if region.has_boundary:
         folium.GeoJson(
             mapping(region.boundary),
-            name="مرز منطقه",
+            name="Region boundary" if locale == "en" else "مرز منطقه",
             style_function=lambda _: {"color": "#3366cc", "weight": 2, "fill": True, "fillOpacity": 0.04},
             tooltip=html.escape(region.display_name),
         ).add_to(fmap)
@@ -119,8 +143,8 @@ def _add_region_outline(fmap: folium.Map, region: Region) -> None:
             weight=2,
             dash_array="6",
             fill=False,
-            tooltip="کادر محدوده (مرز اداری در دسترس نیست)",
-            name="کادر محدوده",
+            tooltip="Bounding box (no administrative boundary available)" if locale == "en" else "کادر محدوده (مرز اداری در دسترس نیست)",
+            name="Bounding box" if locale == "en" else "کادر محدوده",
         ).add_to(fmap)
 
 
@@ -256,8 +280,13 @@ window.addEventListener("load", function () {
 """
 
 
-def _add_fullscreen_control(fmap: folium.Map) -> None:
-    fmap.get_root().script.add_child(folium.Element(FULLSCREEN_JS % {"map": fmap.get_name()}))
+def _add_fullscreen_control(fmap: folium.Map, *, locale: str = "fa") -> None:
+    script = FULLSCREEN_JS
+    if locale == "en":
+        script = (script.replace("تمام‌صفحه", "Full screen")
+                  .replace("خروج از Full screen (Esc)", "Exit full screen (Esc)")
+                  .replace("برای خروج از Full screen، Esc یا دکمهٔ ✕ را بزنید", "Press Esc or ✕ to exit full screen"))
+    fmap.get_root().script.add_child(folium.Element(script % {"map": fmap.get_name()}))
 
 
 def build_facility_map(
@@ -268,6 +297,7 @@ def build_facility_map(
     tile_attribution: str = config.TILE_ATTRIBUTION,
     tile_name: str = config.TILE_NAME,
     cluster_threshold: int = config.CLUSTER_THRESHOLD,
+    locale: str = "fa",
 ) -> folium.Map:
     """Create a map with one layer per category and a layer control."""
     if region is not None:
@@ -288,11 +318,21 @@ def build_facility_map(
         max_zoom=config.TILE_MAX_ZOOM,
         control=False,
     ).add_to(fmap)
-    fmap.get_root().header.add_child(folium.Element(MAP_CSS))
+    if locale == "en":
+        fmap.get_root().header.add_child(folium.Element(
+            "<style>.leaflet-popup-content,.leaflet-tooltip,.leaflet-control-layers"
+            "{font-family:system-ui,sans-serif;direction:ltr;text-align:left}"
+            ".gc-fullscreen a{font-size:18px;line-height:30px;cursor:pointer}"
+            ".gc-fullscreen-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);"
+            "z-index:1000;background:#0f172a;color:white;padding:4px 14px;border-radius:8px;"
+            "opacity:0;transition:opacity .3s}.gc-fullscreen-hint.gc-show{opacity:1}</style>"
+        ))
+    else:
+        fmap.get_root().header.add_child(folium.Element(MAP_CSS))
 
     bounds = None
     if region is not None:
-        _add_region_outline(fmap, region)
+        _add_region_outline(fmap, region, locale=locale)
         b = region.bbox
         bounds = [[b.south, b.west], [b.north, b.east]]
         fmap.fit_bounds(bounds)
@@ -306,21 +346,22 @@ def build_facility_map(
         if not members:
             continue
         swatch = f"<span style='color:{definition.hex_color}'>&#9679;</span>"
-        label = definition.label_fa or definition.label
-        layer = folium.FeatureGroup(name=f"{swatch} {label} ({fa_digits(len(members))})", show=True)
+        label = definition.label if locale == "en" else (definition.label_fa or definition.label)
+        count = f"{len(members):,}" if locale == "en" else fa_digits(len(members))
+        layer = folium.FeatureGroup(name=f"{swatch} {label} ({count})", show=True)
         target = MarkerCluster(disableClusteringAtZoom=17).add_to(layer) if len(members) >= cluster_threshold else layer
         for facility in members:
             folium.Marker(
                 location=[facility.latitude, facility.longitude],
-                popup=folium.Popup(facility_popup_html(facility), max_width=320),
-                tooltip=html.escape(facility.name or f"{label} (بدون نام)"),
+                popup=folium.Popup(facility_popup_html(facility, locale=locale), max_width=320),
+                tooltip=html.escape(facility.name or f"{label} ({'unnamed' if locale == 'en' else 'بدون نام'})"),
                 icon=folium.Icon(color=definition.marker_color, icon=definition.icon, prefix="fa"),
             ).add_to(target)
         layer.add_to(fmap)
 
     folium.LayerControl(collapsed=False).add_to(fmap)
     _add_resize_guard(fmap, bounds)
-    _add_fullscreen_control(fmap)
+    _add_fullscreen_control(fmap, locale=locale)
     return fmap
 
 

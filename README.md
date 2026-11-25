@@ -1,4 +1,6 @@
-# GeoCrisis Agent — Stage 1: Essential Facility Discovery and Mapping
+# GeoCrisis Agent
+
+### Geospatial intelligence for essential infrastructure
 
 A Streamlit application that finds essential civilian and public-service
 facilities in a city or region using OpenStreetMap (OSM), shows them on an
@@ -11,6 +13,18 @@ and crisis-management stages.
 
 This stage covers facility discovery, extraction, validation and mapping only.
 Routing, scenario analysis and the LLM agent are out of scope.
+
+## Interface tour
+
+![Slide show of the English GeoCrisis interface: getting started, live map and facility table](docs/images/geocrisis-tour.gif)
+
+**Explore the slides:** [01 · Getting started](docs/images/01-welcome.png) ·
+[02 · Map and insights](docs/images/02-map.png) ·
+[03 · Facility table](docs/images/03-table.png)
+
+The slides show the running English interface with **synthetic demonstration
+records**; they are not actual facilities. Map data ©
+[OpenStreetMap contributors](https://www.openstreetmap.org/copyright).
 
 ## Installation
 
@@ -26,10 +40,15 @@ pip install -r requirements.txt
 ## Running
 
 ```bash
+# English interface
+streamlit run app_en.py
+
+# Persian interface (alternative)
 streamlit run app.py
 ```
 
-Streamlit then opens the app at http://localhost:8501.
+Streamlit opens the selected interface at http://localhost:8501. Both use the
+same search, facility processing, map, and export services.
 
 ## Tests
 
@@ -60,32 +79,18 @@ service.
    including the exact Overpass query.
 5. **Export**: download CSV, GeoJSON or JSON from the sidebar.
 
-## User interface (Persian, RTL)
+## User interfaces
 
-The interface is in Persian and follows the team's UI design rules document
-(«قواعد طراحی واسط کاربری»):
+- **English:** A left-to-right workspace with an onboarding guide, region and
+  category controls, summary cards, an interactive map, a searchable facility
+  table, data-quality details and CSV/GeoJSON/JSON exports. Map layers, popups
+  and fullscreen controls are in English.
+- **Persian:** The original right-to-left workspace remains available, with
+  B Nazanin text, Persian digits and Jalali timestamps in Tehran time. Its map
+  controls and popups remain in Persian.
 
-- The whole layout runs right to left, with the sidebar on the right.
-- The sidebar and the header use the navy gradient `#0f172a → #1e293b`. The
-  header title is green (`#4ed793`), and the main area has 2.5rem of top padding.
-- The font is **B Nazanin** at an 18px base size. The font files live in
-  `static/fonts/` and are served by Streamlit (`.streamlit/config.toml`), so
-  browsers without the font installed still show it.
-- Buttons use high contrast with a lighter border (for example green
-  `#15803d` / `#4ade80`). Download buttons are blue.
-- Help boxes use the two prescribed colour schemes (light green `#daf39e` and
-  light blue `rgba(28,131,255,.1)` / `#0054A3`), with bullets for longer guidance.
-- Results appear as status cards first, with icons and conditional colours and a
-  text badge so status never relies on colour alone. A chart comes next, then the
-  tables. Modules are split into four tabs: map and chart, table, data quality, guide.
-- Numbers are shown with Persian digits, and the retrieval time is shown as a
-  Jalali date in Tehran time.
-- The base map is the unchanged default OSM map. Only the layer names and
-  popups are in Persian.
-
-Only the interface is translated. The data records, exports and service
-messages stay in English, because later stages consume them. The Persian texts
-live in `ui/i18n_fa.py`.
+The interfaces share the same processing pipeline and export formats. Facility
+names and other original OSM tags are kept as supplied by OpenStreetMap.
 
 ## Facility categories
 
@@ -153,7 +158,7 @@ Every endpoint and limit can be set with an environment variable (see `config.py
 |---|---|---|
 | `GEOCRISIS_CONTACT` | *(empty)* | Your e-mail or project URL. It is added to the User-Agent and, if it is an e-mail address, sent to Nominatim. **Set this for any real use.** |
 | `GEOCRISIS_USER_AGENT` | `GeoCrisisAgent/0.1.0 (...)` | Full User-Agent override |
-| `GEOCRISIS_NOMINATIM_LANGUAGE` | `fa,en` | Language of region names returned by Nominatim |
+| `GEOCRISIS_NOMINATIM_LANGUAGE` | `fa,en` (Persian), `en` (English) | Language of region names returned by Nominatim |
 | `GEOCRISIS_NOMINATIM_URL` | `https://nominatim.openstreetmap.org/search` | Geocoder endpoint |
 | `GEOCRISIS_OVERPASS_URLS` | `https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter` | Comma-separated Overpass endpoints, tried in order. The next one is used only after a connection error, a client timeout or HTTP 502/503/504; a bad query (400), rate limiting (429) or an "out of memory" remark is reported at once. The endpoint that answered is shown in the app and written to the exports as `source_endpoint`. |
 | `GEOCRISIS_OVERPASS_URL` | *(unset)* | Single Overpass endpoint, no fallback. Ignored when `GEOCRISIS_OVERPASS_URLS` is set |
@@ -195,9 +200,11 @@ Data © OpenStreetMap contributors, available under the
 
 ```text
 app.py                          Streamlit UI (Persian, RTL)
-.streamlit/config.toml          Theme: B Nazanin font, colours, static serving
+app_en.py                       Streamlit UI (English, LTR)
+.streamlit/config.toml          Shared theme and static font serving
 static/fonts/                   B Nazanin font files served to the browser
 ui/theme.py                     RTL layout and design-rule CSS
+ui/en_theme.py                  English workspace styling
 ui/components.py                Header, help boxes, status cards, bar list
 ui/i18n_fa.py                   Persian texts and translated messages
 ui/persian.py                   Persian digits and Jalali dates
@@ -211,7 +218,8 @@ services/facility_service.py    End-to-end pipeline (UI-independent)
 processing/normalize_facilities.py
 processing/validate_facilities.py
 processing/region_filter.py
-visualization/facility_map.py   Folium map, layers, popups
+visualization/facility_map.py   Localized Folium map, layers, popups
+docs/images/                    Screenshots and README slideshow
 exports/export_facilities.py    CSV / GeoJSON / JSON
 tests/                          Offline pytest suite
 ```

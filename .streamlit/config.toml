@@ -1,6 +1,5 @@
-# Theme for the Persian (RTL) user interface.
-# The B Nazanin font is served from ./static/fonts so every browser renders it,
-# even on computers that do not have the font installed.
+# Shared Streamlit theme. The Persian interface applies B Nazanin in its own
+# CSS; the English interface uses a Latin-friendly sans-serif font.
 
 [server]
 enableStaticServing = true
@@ -16,8 +15,8 @@ secondaryBackgroundColor = "#eef2f7"
 textColor = "#0f172a"
 linkColor = "#0054A3"
 borderColor = "#d5dde8"
-font = "BNazanin, 'B Nazanin', Vazirmatn, Tahoma, sans-serif"
-headingFont = "BNazanin, 'B Nazanin', Vazirmatn, Tahoma, sans-serif"
+font = "sans-serif"
+headingFont = "sans-serif"
 baseFontSize = 18
 baseRadius = "0.6rem"
 dataframeHeaderBackgroundColor = "#e2e8f0"
